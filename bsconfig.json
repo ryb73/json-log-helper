@@ -1,0 +1,19 @@
+{
+    "name": "json-log-helper",
+    "bs-dependencies": [
+        "@ryb73/bs-lodash",
+        "@ryb73/re-dom",
+        "bs-css",
+        "reason-react",
+    ],
+    "sources": [
+        { "dir": "src" },
+        {
+            "dir": "test",
+            "type": "dev"
+        }
+    ],
+    "refmt": 3,
+    "reason" : { "react-jsx" : 2 },
+    "bsc-flags": [ "-w -10", "-bs-super-errors" ]
+}
