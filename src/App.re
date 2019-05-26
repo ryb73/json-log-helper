@@ -14,32 +14,27 @@ module Styles = {
         borderStyle(`none),
         padding(`px(8)),
     ]);
+    let filterRow = style([
+        display(`flex),
+    ]);
+    let textarea = style([
+        width(`percent(100.)),
+        borderWidth(`zero),
+        boxSizing(`borderBox),
+    ]);
 };
 
-type state = string;
-type action = string;
+type state = {
+    filter: string,
+    editingRows: bool,
+    rows: array(Js.Json.t),
+    textarea: ref(option(Dom.element)),
+};
+type action =
+    | SetFilter(string) | Edit | SetRows(array(Js.Json.t));
 
-let rows =
-    {|
-        {"message":"listening","level":"info"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBCRUHOuitoAmc_xhNzYjyF","message":"Creating external playlist link","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBvbdj6arpFi6xgNid8sWZ9","message":"Creating external playlist link","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYDlg7ap9iyGOBnnp4XrnMen","message":"Creating external playlist link","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBCRUHOuitoAmc_xhNzYjyF","message":"Matched external playlist to local","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBCRUHOuitoAmc_xhNzYjyF","message":"Refrshing YT playlist","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBvbdj6arpFi6xgNid8sWZ9","message":"Matched external playlist to local","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYDlg7ap9iyGOBnnp4XrnMen","message":"Matched external playlist to local","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBvbdj6arpFi6xgNid8sWZ9","message":"Refrshing YT playlist","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYDlg7ap9iyGOBnnp4XrnMen","message":"Refrshing YT playlist","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBqzCkt_I3FJrvsaZOJwjOe","message":"Creating external playlist link","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYAID9FpRldiWrzsDznDs1zx","message":"Creating external playlist link","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYAID9FpRldiWrzsDznDs1zx","message":"Matched external playlist to local","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYAID9FpRldiWrzsDznDs1zx","message":"Refrshing YT playlist","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBqzCkt_I3FJrvsaZOJwjOe","message":"Matched external playlist to local","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBqzCkt_I3FJrvsaZOJwjOe","message":"Refrshing YT playlist","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBqzCkt_I3FJrvsaZOJwjOe","playlistId":80,"message":"Matched to local","level":"debug"}
-        {"path":"/get-my-user-data/","ip":"::ffff:127.0.0.1","ytPlaylistId":"PLcrWYEiKEjYBqzCkt_I3FJrvsaZOJwjOe","playlistId":80,"message":"Found link","level":"debug"}
-    |}
+let rowsFromString = (str) =>
+    str
     |> Js.String.split("\n")
     |> Js.Array.map(Js.String.trim)
     |> Js.Array.filter(s => Js.String.length(s) !== 0)
@@ -55,10 +50,10 @@ let filterChange = (event, { send }) => {
         |> Belt.Option.getExn
         |> Input.value;
 
-    send(value);
+    send(SetFilter(value));
 };
 
-let renderFilter = ({ state: filter, handle }) =>
+let renderFilter = ({ state: { filter }, handle }) =>
     <input className=Styles.filter type_="text" value=filter
         onChange=(handle(filterChange)) />;
 
@@ -100,21 +95,62 @@ let rec filterRow = (filter, row) =>
         }
     };
 
-let renderRows = ({ state: filter }) =>
+let renderRows = ({ state: { filter, rows } }) =>
     rows
     |> Js.Array.filter(filterRow(parseFilter(filter)))
     |> Js.Array.mapi((json, i) => <Row key=string_of_int(i) json />)
     |> array;
 
+let editRows = (_, { send }) => send(Edit);
+
+let saveJson = (_, { send, state: { textarea }}) => ReDom.(
+    Belt.Option.getExn(textarea^)
+    |> Element.fromDom
+    |> Textarea.cast
+    |> Belt.Option.getExn
+    |> Textarea.value
+    |> rowsFromString
+    |> (v => SetRows(v))
+    |> send
+);
+
+let renderJsonEditButton = ({ state: { editingRows }, handle }) =>
+    editingRows ?
+        <button type_="button" onClick=handle(saveJson)>
+            (string("Save"))
+        </button>
+    :
+        <button type_="button" onClick=handle(editRows)>
+            (string("Edit"))
+        </button>;
+
+let setTextarea = (el, { state: { textarea } }) =>
+    textarea := Js.Nullable.toOption(el);
+
+let renderJsonEditor = ({ state: { editingRows }, handle }) =>
+    editingRows ?
+        <textarea rows=10 className=Styles.textarea ref=handle(setTextarea) />
+    : null;
+
 let render = (self) =>
     <div className=Styles.container>
-        (renderFilter(self))
+        <div className=Styles.filterRow>
+            (renderFilter(self))
+            (renderJsonEditButton(self))
+        </div>
+        (renderJsonEditor(self))
         (renderRows(self))
     </div>;
 
-let reducer = (newFilter, _) => Update(newFilter);
+let reducer = (action, state) =>
+    switch action {
+        | SetFilter(filter) => Update({ ...state, filter })
+        | Edit => Update({ ...state, editingRows: true })
+        | SetRows(rows) => Update({ ...state, rows, editingRows: false })
+    };
 
-let initialState = _ => "";
+let initialState = _ =>
+    { filter: "", rows: [||], editingRows: true, textarea: ref(None) };
 
 let component = ReasonReact.reducerComponent("App");
 let make = (_) => { ...component, render, initialState, reducer };

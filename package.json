@@ -32,11 +32,11 @@
     "bs-platform": "^4.0.0"
   },
   "devDependencies": {
-    "@ryb73/bs-lodash": "^0.1.0",
-    "@ryb73/re-dom": "^0.0.11",
+    "@ryb73/bs-lodash": "^0.1.1",
+    "@ryb73/re-dom": "^0.0.13",
     "bs-css": "^8.0.4",
     "reason-react": "^0.7.0",
-    "webpack": "^4.31.0",
+    "webpack": "^4.32.2",
     "webpack-cli": "^3.3.2"
   }
 }

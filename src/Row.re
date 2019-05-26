@@ -17,6 +17,16 @@ module Styles = {
         opacity(0.8),
         marginLeft(`px(4)),
     ]);
+    let level = style([
+        display(`inlineBlock),
+        width(`px(75)),
+    ]);
+    let error = style([color(`hex("f00"))]);
+    let warning = style([color(`hex("ff0"))]);
+    let info = style([color(`hex("55F"))]);
+    let debug = style([color(`hex("eee"))]);
+    let verbose = style([color(`hex("f0f"))]);
+    let silly = style([color(`hex("777"))]);
 };
 
 type state = bool;
@@ -63,6 +73,32 @@ let getMessage = (json) =>
     }
     |> Js.String.make;
 
+let getLevel = (json) =>
+    switch (Js.Json.classify(json)) {
+        | Js.Json.JSONObject(dict) =>
+            Js.Dict.get(dict, "level")
+            -> Belt.Option.getWithDefault(json)
+
+        | _ => json
+    }
+    |> Js.String.make;
+
+let renderLevel = (level) => {
+    let className = switch level {
+        | "error" => Styles.error
+        | "warning" => Styles.warning
+        | "info" => Styles.info
+        | "debug" => Styles.debug
+        | "verbose" => Styles.verbose
+        | "silly" => Styles.silly
+        | _ => failwith("Unrecognized level: " ++ level);
+    };
+
+    <span className=Css.(merge([className, Styles.level]))>
+        (string(level))
+    </span>
+};
+
 let component = reducerComponent("Row");
 let make = (~json, _) => {
     let effectiveJson = {
@@ -90,6 +126,7 @@ let make = (~json, _) => {
 
     let header = ({ state: expanded, handle }) =>
         <h2 className=Styles.header onClick=(handle(clicked))>
+            (renderLevel(getLevel(json)))
             (getMessage(json) |> string)
             (!expanded ? subtitle : null)
         </h2>;
