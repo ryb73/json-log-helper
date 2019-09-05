@@ -33,10 +33,11 @@
   },
   "devDependencies": {
     "@ryb73/bs-lodash": "^0.1.1",
-    "@ryb73/re-dom": "^0.0.13",
-    "bs-css": "^8.0.4",
+    "@ryb73/re-dom": "^0.1.2",
+    "bs-css": "^9.0.1",
+    "bs-platform": "^5.0.6",
     "reason-react": "^0.7.0",
-    "webpack": "^4.32.2",
-    "webpack-cli": "^3.3.2"
+    "webpack": "^4.39.2",
+    "webpack-cli": "^3.3.7"
   }
 }

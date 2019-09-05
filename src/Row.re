@@ -22,7 +22,7 @@ module Styles = {
         width(`px(75)),
     ]);
     let error = style([color(`hex("f00"))]);
-    let warning = style([color(`hex("ff0"))]);
+    let warn = style([color(`hex("ff0"))]);
     let info = style([color(`hex("55F"))]);
     let debug = style([color(`hex("eee"))]);
     let verbose = style([color(`hex("f0f"))]);
@@ -86,7 +86,7 @@ let getLevel = (json) =>
 let renderLevel = (level) => {
     let className = switch level {
         | "error" => Styles.error
-        | "warning" => Styles.warning
+        | "warn" => Styles.warn
         | "info" => Styles.info
         | "debug" => Styles.debug
         | "verbose" => Styles.verbose
