@@ -1,2 +1,2 @@
 # json-log-helper
-Parse local log output in real time
+Parse local log output
