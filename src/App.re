@@ -1,4 +1,4 @@
-open ReasonReact;
+open React;
 
 module Styles = {
     open Css;
@@ -25,13 +25,10 @@ module Styles = {
 };
 
 type state = {
-    filter: string,
     editingRows: bool,
     rows: array(Js.Json.t),
-    textarea: ref(option(Dom.element)),
 };
-type action =
-    | SetFilter(string) | Edit | SetRows(array(Js.Json.t));
+type action = Edit | SetRows(array(Js.Json.t));
 
 let rowsFromString = (str) =>
     str
@@ -39,23 +36,6 @@ let rowsFromString = (str) =>
     |> Js.Array.map(Js.String.trim)
     |> Js.Array.filter(s => Js.String.length(s) !== 0)
     |> Js.Array.map(Js.Json.parseExn);
-
-let filterChange = (event, { send }) => {
-    open ReDom;
-
-    let value = ReactEvent.Form.currentTarget(event)
-        |> Obj.magic
-        |> Element.fromDom
-        |> Input.cast
-        |> Belt.Option.getExn
-        |> Input.value;
-
-    send(SetFilter(value));
-};
-
-let renderFilter = ({ state: { filter }, handle }) =>
-    <input className=Styles.filter type_="text" value=filter
-        onChange=(handle(filterChange)) />;
 
 type filter =
     | And(filter, filter) | Or(filter, filter)
@@ -95,62 +75,82 @@ let rec filterRow = (filter, row) =>
         }
     };
 
-let renderRows = ({ state: { filter, rows } }) =>
-    rows
-    |> Js.Array.filter(filterRow(parseFilter(filter)))
-    |> Js.Array.mapi((json, i) => <Row key=string_of_int(i) json />)
-    |> array;
-
-let editRows = (_, { send }) => send(Edit);
-
-let saveJson = (_, { send, state: { textarea }}) => ReDom.(
-    Belt.Option.getExn(textarea^)
-    |> Element.fromDom
-    |> Textarea.cast
-    |> Belt.Option.getExn
-    |> Textarea.value
-    |> rowsFromString
-    |> (v => SetRows(v))
-    |> send
-);
-
-let renderJsonEditButton = ({ state: { editingRows }, handle }) =>
-    editingRows ?
-        <button type_="button" onClick=handle(saveJson)>
-            (string("Save"))
-        </button>
-    :
-        <button type_="button" onClick=handle(editRows)>
-            (string("Edit"))
-        </button>;
-
-let setTextarea = (el, { state: { textarea } }) =>
-    textarea := Js.Nullable.toOption(el);
-
-let renderJsonEditor = ({ state: { editingRows }, handle }) =>
-    editingRows ?
-        <textarea rows=10 className=Styles.textarea ref=handle(setTextarea) />
-    : null;
-
-let render = (self) =>
-    <div className=Styles.container>
-        <div className=Styles.filterRow>
-            (renderFilter(self))
-            (renderJsonEditButton(self))
-        </div>
-        (renderJsonEditor(self))
-        (renderRows(self))
-    </div>;
-
-let reducer = (action, state) =>
+let reducer = (state, action) =>
     switch action {
-        | SetFilter(filter) => Update({ ...state, filter })
-        | Edit => Update({ ...state, editingRows: true })
-        | SetRows(rows) => Update({ ...state, rows, editingRows: false })
+        | Edit => { ...state, editingRows: true }
+        | SetRows(rows) => { rows, editingRows: false }
     };
 
-let initialState = _ =>
-    { filter: "", rows: [||], editingRows: true, textarea: ref(None) };
+[@react.component]
+let make = (_) =>{
+    let (filter, setFilter) = useState(() => "");
+    let ({rows, editingRows}, dispatch) = useReducer(reducer, { rows: [||], editingRows: true });
+    let textareaRef = useRef(Js.Nullable.null);
 
-let component = ReasonReact.reducerComponent("App");
-let make = (_) => { ...component, render, initialState, reducer };
+    let handleFilterChange = useCallback0(
+        (event) => {
+            open ReDom;
+
+            let value = ReactEvent.Form.currentTarget(event)
+                |> Obj.magic
+                |> Element.fromDom
+                |> Input.cast
+                |> Belt.Option.getExn
+                |> Input.value;
+
+            setFilter(_ => value);
+        }
+    );
+
+    let renderRows = useCallback4(
+        () =>
+            rows
+            |> Js.Array.filter(filterRow(parseFilter(filter)))
+            |> Js.Array.mapi((json, i) => <Row key=string_of_int(i) json />)
+            |> array,
+        (rows, filter, filterRow, parseFilter)
+    );
+
+    let saveJson = useCallback0(
+        (_) => ReDom.(
+            React.Ref.current(textareaRef)
+            |> Js.Nullable.toOption
+            |> Belt.Option.getExn
+            |> Element.fromDom
+            |> Textarea.cast
+            |> Belt.Option.getExn
+            |> Textarea.value
+            |> rowsFromString
+            |> (v => SetRows(v))
+            |> dispatch
+        )
+    );
+
+    let renderJsonEditButton = useCallback2(
+        () =>
+            editingRows ?
+                <button type_="button" onClick=saveJson>
+                    (string("Save"))
+                </button>
+            :
+                <button type_="button" onClick={_ => dispatch(Edit)}>
+                    (string("Edit"))
+                </button>,
+        (editingRows, saveJson)
+    );
+
+    <div className=Styles.container>
+        <div className=Styles.filterRow>
+            <input
+                className=Styles.filter type_="text" value=filter
+                onChange=(handleFilterChange)
+            />
+            (renderJsonEditButton())
+        </div>
+
+        (!editingRows ? null :
+            <textarea rows=10 className=Styles.textarea ref={ReactDOMRe.Ref.domRef(textareaRef)} />)
+
+        (renderRows())
+    </div>;
+};

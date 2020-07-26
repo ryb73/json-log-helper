@@ -1,4 +1,4 @@
-open ReasonReact;
+open React;
 
 module Styles = {
     open Css;
@@ -99,8 +99,10 @@ let renderLevel = (level) => {
     </span>
 };
 
-let component = reducerComponent("Row");
-let make = (~json, _) => {
+[@react.component]
+let make = (~json) => {
+    let (expanded, setExpanded) = useState(() => false);
+
     let effectiveJson = {
         let dict = Js.Json.stringify(json)
             |> Js.Json.parseExn
@@ -116,30 +118,15 @@ let make = (~json, _) => {
         -> Belt.Option.getWithDefault(json);
     };
 
-    let subtitle =
-        <span className=Styles.subtitle>
-            (Js.Json.stringify(effectiveJson) |> string)
-        </span>;
-
-    let clicked = (_, { state: expanded, send }) =>
-        send(!expanded);
-
-    let header = ({ state: expanded, handle }) =>
-        <h2 className=Styles.header onClick=(handle(clicked))>
+    <div>
+        <h2 className=Styles.header onClick=((_) => setExpanded(v => !v))>
             (renderLevel(getLevel(json)))
             (getMessage(json) |> string)
-            (!expanded ? subtitle : null)
-        </h2>;
-
-    let render = ({ state: expanded } as self) =>
-        <div>
-            (header(self))
-            (expanded ? renderJson(json) : null)
-        </div>;
-
-    let initialState = _ => false;
-
-    let reducer = (action, _: state) => Update(action);
-
-    { ...component, render, initialState, reducer };
+            (expanded ? null :
+                <span className=Styles.subtitle>
+                    (Js.Json.stringify(effectiveJson) |> string)
+                </span>)
+        </h2>
+        (expanded ? renderJson(json) : null)
+    </div>
 };

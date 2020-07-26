@@ -29,13 +29,13 @@
     "webpack-watch": "webpack -w"
   },
   "peerDependencies": {
-    "bs-platform": "^4.0.0"
+    "bs-platform": "^6.0.0"
   },
   "devDependencies": {
     "@ryb73/bs-lodash": "^0.1.1",
-    "@ryb73/re-dom": "^0.1.5",
+    "@ryb73/re-dom": "^0.2.1",
     "bs-css": "^10.0.1",
-    "bs-platform": "^5.0.6",
+    "bs-platform": "^6.0.0",
     "reason-react": "^0.7.0",
     "webpack": "^4.41.0",
     "webpack-cli": "^3.3.9"
